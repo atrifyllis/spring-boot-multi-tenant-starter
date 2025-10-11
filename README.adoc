@@ -1,0 +1,423 @@
+= Spring Boot Multi-Tenant Starter
+
+A Spring Boot starter that provides *automatic multi-tenant data isolation* using PostgreSQL Row-Level Security (RLS). Simply add the dependency, configure your datasources, and your JPA repositories will automatically filter data by tenant.
+
+== Quick Start
+
+=== 1. Add Dependency
+
+[source,kotlin]
+----
+dependencies {
+    implementation("io.github.atrifyllis:spring-boot-multi-tenant-starter:0.0.1-SNAPSHOT")
+}
+----
+
+=== 2. Configure Application
+
+[source,yaml]
+----
+multitenancy:
+  enabled: true
+  admin:
+    datasource:
+      url: jdbc:postgresql://localhost:5432/mydb
+      username: postgres
+      password: postgres
+  tenant:
+    datasource:
+      url: ${multitenancy.admin.datasource.url}
+      username: app_user
+      password: app_user
+  tenant-jpa-base-package: com.yourapp.domain
+----
+
+=== 3. Create a Tenant-Aware Entity
+
+[source,kotlin]
+----
+@Entity
+@Table(name = "product")
+@EntityListeners(TenantListener::class)
+class Product(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+
+    var name: String,
+
+    @Column(name = "tenant_id")
+    private var internalTenantId: UUID? = null
+) : TenantAware {
+    override fun setTenantId(tenantId: UUID?) {
+        this.internalTenantId = tenantId
+    }
+}
+----
+
+=== 4. Create a Repository
+
+[source,kotlin]
+----
+interface ProductRepository : JpaRepository<Product, UUID>
+----
+
+=== 5. Use It!
+
+[source,kotlin]
+----
+@Service
+class ProductService(private val productRepository: ProductRepository) {
+    fun getAllProducts() = productRepository.findAll() // ✅ Automatically filtered by current tenant!
+}
+----
+
+*That's it!* The starter automatically:
+
+* ✅ Enables Row-Level Security (RLS) on your tables
+* ✅ Sets the tenant ID on entities before save
+* ✅ Filters all JPA queries by the current tenant
+* ✅ Manages tenant context from JWT tokens
+
+== 📚 Full Working Example
+
+👉 *See link:../multitenant-example-app/README.md[multitenant-example-app]* for a complete working example with:
+
+* JWT authentication
+* REST API endpoints
+* Multi-tenant switching
+* Integration tests
+* Step-by-step usage guide with curl commands
+
+== Features
+
+* ✅ *Zero-code tenant isolation* - JPA repositories automatically filtered
+* ✅ *PostgreSQL Row-Level Security (RLS)* - Database-level security
+* ✅ *Automatic tenant context* - Extracted from JWT tokens
+* ✅ *Two-datasource pattern* - Admin for migrations, tenant for queries
+* ✅ *Automatic RLS setup* - Repeatable Flyway migration enables RLS
+* ✅ *Multi-tenant users* - Support users with access to multiple tenants
+* ✅ *Type-safe* - Works with Spring Data JPA
+
+== Configuration Reference
+
+=== Required Properties
+
+[source,yaml]
+----
+multitenancy:
+  enabled: true                              # Enable multi-tenancy
+  admin:
+    datasource:
+      url: jdbc:postgresql://localhost:5432/mydb
+      username: postgres                     # Privileged user for migrations
+      password: postgres
+  tenant:
+    datasource:
+      url: ${multitenancy.admin.datasource.url}
+      username: app_user                     # Restricted user for queries
+      password: app_user
+  tenant-jpa-base-package: com.yourapp.domain  # Package to scan for entities
+----
+
+=== Optional Properties
+
+[source,yaml]
+----
+multitenancy:
+  rls:
+    enabled: true                            # Default: true
+    schema: public                           # Default: public
+    tenant-column: tenant_id                 # Default: tenant_id
+    policy-name: tenant_isolation_policy     # Default: tenant_isolation_policy
+    exclude-tables:                          # Tables to skip RLS
+      - flyway_schema_history
+      - audit_log
+----
+
+== Usage Guide
+
+=== Creating Tenant-Aware Entities
+
+All entities that need tenant isolation must:
+
+1. Implement `TenantAware` interface
+2. Add `@EntityListeners(TenantListener::class)` annotation
+3. Have a `tenant_id UUID` column in the database
+
+*Minimal Example:*
+
+[source,kotlin]
+----
+@Entity
+@Table(name = "user")
+@EntityListeners(TenantListener::class)
+class User(
+    @Id var id: UUID? = null,
+    var name: String,
+
+    @Column(name = "tenant_id")
+    private var internalTenantId: UUID? = null
+) : TenantAware {
+    override fun setTenantId(tenantId: UUID?) {
+        this.internalTenantId = tenantId
+    }
+}
+----
+
+*Why `internalTenantId`?* To avoid JVM signature clash with the `setTenantId` method from `TenantAware`.
+
+=== Creating Repositories
+
+Use standard Spring Data JPA repositories:
+
+[source,kotlin]
+----
+interface UserRepository : JpaRepository<User, UUID> {
+    // Custom queries are automatically tenant-filtered too!
+    fun findByName(name: String): List<User>
+}
+----
+
+=== Configuring JPA
+
+[source,kotlin]
+----
+@Configuration
+@EnableJpaRepositories(
+    entityManagerFactoryRef = "tenantEntityManagerFactory",
+    transactionManagerRef = "transactionManager",
+    basePackages = ["com.yourapp.repositories"]
+)
+class JpaConfig
+----
+
+=== Tenant Context (Automatic)
+
+The starter provides a `TenantInterceptor` that *automatically*:
+
+* Extracts `tenantId` from JWT token (expects a claim with list of tenant UUIDs)
+* Validates optional `X-Tenant-ID` header against JWT claims
+* Sets `TenantContext` before each request
+* Clears `TenantContext` after each request
+
+*JWT Token Example:*
+
+[source,json]
+----
+{
+  "sub": "user@example.com",
+  "tenantId": ["11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222"]
+}
+----
+
+*Optional Header (for multi-tenant users):*
+
+[source]
+----
+X-Tenant-ID: 11111111-1111-1111-1111-111111111111
+----
+
+== Database Setup
+
+=== Creating Database Users
+
+The starter expects two PostgreSQL users:
+
+[cols="1,2,2"]
+|===
+|User |Purpose |Privileges
+
+|`postgres`
+|Migrations, schema management
+|Database owner
+
+|`app_user`
+|Application queries
+|SELECT, INSERT, UPDATE, DELETE
+|===
+
+*The `app_user` is created automatically* by your first migration:
+
+[source,sql]
+----
+-- V001__init.sql
+CREATE ROLE app_user LOGIN PASSWORD 'app_user';
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO app_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO app_user;
+----
+
+=== Table Requirements
+
+Each tenant-aware table needs a `tenant_id` column:
+
+[source,sql]
+----
+CREATE TABLE product (
+    id UUID PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    tenant_id UUID NOT NULL  -- Required for RLS
+);
+----
+
+*RLS is enabled automatically* by the starter's repeatable migration (`R__enforce_rls.sql`).
+
+== How It Works
+
+=== Two-Datasource Pattern
+
+[cols="2,1,1,3"]
+|===
+|DataSource |Database User |RLS Enforcement |Used For
+
+|*adminDataSource*
+|`postgres`
+|❌ Bypasses RLS
+|Migrations, cross-tenant operations
+
+|*tenantDataSource*
+|`app_user`
+|✅ Enforces RLS
+|Normal JPA operations
+|===
+
+=== Tenant Context Flow
+
+----
+Request with JWT
+    ↓
+TenantInterceptor extracts tenantId from JWT
+    ↓
+TenantContext.setTenantId(uuid)
+    ↓
+JPA opens connection via tenantDataSource
+    ↓
+TenantAwareDataSource executes: SET app.tenant_id = 'uuid'
+    ↓
+PostgreSQL RLS filters queries using current_setting('app.tenant_id')
+    ↓
+Only current tenant's data is visible
+----
+
+== ⚠️ Security Best Practices
+
+=== DO ✅
+
+1. *Use JPA repositories* for all business logic
+2. *Keep your entities simple* - let the starter handle tenant_id
+3. *Test tenant isolation* thoroughly
+4. *Use separate database users* (admin vs tenant)
+5. *Audit cross-tenant operations* (if you need them)
+
+=== DON'T ❌
+
+1. *Don't inject `DSLContext` in services* - It uses admin datasource and bypasses RLS!
+2. *Don't create custom DataSource beans* without wrapping in `TenantAwareDataSource`
+3. *Don't expose `adminDataSource`* to service layer
+4. *Don't disable RLS* in production
+5. *Don't manually manage tenant_id* - the `TenantListener` does it automatically
+
+=== DSLContext Security Warning
+
+[WARNING]
+====
+*CRITICAL:* The autoconfigured `DSLContext` bean uses the *admin datasource* and *BYPASSES RLS*.
+====
+
+*❌ NEVER do this:*
+
+[source,kotlin]
+----
+@Service
+class UserService(
+    private val dslContext: DSLContext  // ❌ Returns ALL tenants' data!
+) {
+    fun getUsers() = dslContext.selectFrom(USER).fetch()
+}
+----
+
+*✅ Do this instead:*
+
+[source,kotlin]
+----
+@Service
+class UserService(
+    private val userRepository: UserRepository  // ✅ Tenant-filtered
+) {
+    fun getUsers() = userRepository.findAll()
+}
+----
+
+*When to use DSLContext:*
+
+* ✅ Cross-tenant admin reports (with proper authorization)
+* ✅ Database migrations (Flyway)
+* ✅ Test cleanup (deleting all tenants' data)
+
+*For everything else, use JPA repositories.*
+
+== Testing
+
+Use Testcontainers with both datasources pointing to the same container:
+
+[source,kotlin]
+----
+@SpringBootTest
+@Testcontainers
+class MyTest {
+    companion object {
+        @Container
+        val postgres = PostgreSQLContainer("postgres:alpine3.19")
+
+        @JvmStatic
+        @DynamicPropertySource
+        fun properties(registry: DynamicPropertyRegistry) {
+            registry.add("multitenancy.admin.datasource.url", postgres::getJdbcUrl)
+            registry.add("multitenancy.tenant.datasource.url", postgres::getJdbcUrl)
+        }
+    }
+}
+----
+
+== Troubleshooting
+
+=== Queries return data from all tenants
+
+*Cause:* Using DSLContext or admin datasource instead of JPA repositories.
+
+*Solution:* Use JPA repositories, not DSLContext.
+
+=== No data returned even though it exists
+
+*Cause:* Tenant context not set, or tenant_id doesn't match.
+
+*Solution:*
+
+* Verify JWT contains `tenantId` claim
+* Check: `SELECT current_setting('app.tenant_id');` in PostgreSQL
+* Verify `tenant_id` in your data matches the context
+
+=== RLS policies not created
+
+*Cause:* Repeatable migration didn't run, or table doesn't have `tenant_id` column.
+
+*Solution:*
+
+* Check: `SELECT * FROM pg_policies WHERE tablename = 'your_table';`
+* Verify table has `tenant_id UUID` column
+* Check `multitenancy.rls.exclude-tables` configuration
+
+=== "Could not determine type for: org.jooq.DSLContext"
+
+*Cause:* Missing jOOQ dependency.
+
+*Solution:* Add jOOQ to your dependencies (the starter requires it).
+
+== Example Projects
+
+* 📚 *link:../multitenant-example-app/[multitenant-example-app]* - Minimal working example with JWT auth
+
+== License
+
+[Your License Here]
+
