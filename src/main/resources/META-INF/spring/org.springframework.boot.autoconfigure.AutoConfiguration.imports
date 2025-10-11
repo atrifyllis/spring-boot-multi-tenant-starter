@@ -1,0 +1,4 @@
+io.github.atrifyllis.multitenancy.autoconfigure.MultiTenancyAutoConfiguration
+io.github.atrifyllis.multitenancy.autoconfigure.AdminDataSourceAutoConfiguration
+io.github.atrifyllis.multitenancy.autoconfigure.TenantJpaAutoConfiguration
+io.github.atrifyllis.multitenancy.autoconfigure.RlsAutoConfiguration
