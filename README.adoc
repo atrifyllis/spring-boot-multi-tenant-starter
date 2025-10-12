@@ -2,6 +2,20 @@
 
 A Spring Boot starter that provides *automatic multi-tenant data isolation* using PostgreSQL Row-Level Security (RLS). Simply add the dependency, configure your datasources, and your JPA repositories will automatically filter data by tenant.
 
+== Prerequisites
+
+[IMPORTANT]
+====
+- This starter *only supports PostgreSQL*. It will NOT work with MySQL, MariaDB, SQL Server, Oracle, or other databases.
+- PostgreSQL 12 or higher is recommended (Row-Level Security and UUID support required).
+- Java 17+ and Spring Boot 3.x are recommended.
+- Your tables must use the `UUID` type for tenant and entity IDs.
+- Flyway *is required* for database migrations. The starter expects Flyway to:
+  - Be present on the classpath and configured.
+  - Have access to the database and be able to create its metadata table (`flyway_schema_history`) if not already present.
+  - Manage all schema and RLS migrations (including repeatable migrations for RLS setup).
+====
+
 == Quick Start
 
 === 1. Add Dependency
@@ -62,15 +76,34 @@ class Product(
 interface ProductRepository : JpaRepository<Product, UUID>
 ----
 
-=== 5. Use It!
+=== 5. How Tenant ID is Retrieved and Set
 
-[source,kotlin]
+The starter *automatically* extracts the `tenantId` from the JWT token in each request. You do not need to write any code for this—just ensure your JWT contains a `tenantId` claim (an array of UUIDs). Optionally, you can specify the tenant with an `X-Tenant-ID` header if your user has access to multiple tenants.
+
+*Example JWT payload:*
+
+[source,json]
 ----
-@Service
-class ProductService(private val productRepository: ProductRepository) {
-    fun getAllProducts() = productRepository.findAll() // ✅ Automatically filtered by current tenant!
+{
+  "sub": "user@example.com",
+  "tenantId": ["11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222"]
 }
 ----
+
+*Example request header (for multi-tenant users):*
+
+[source]
+----
+X-Tenant-ID: 11111111-1111-1111-1111-111111111111
+----
+
+The starter's `TenantInterceptor` will:
+
+* Extract the `tenantId` from the JWT
+* Validate the optional `X-Tenant-ID` header
+* Set the tenant context for the duration of the request
+
+You can now use your repositories and services as normal—data will be automatically filtered by the current tenant!
 
 *That's it!* The starter automatically:
 
@@ -78,6 +111,14 @@ class ProductService(private val productRepository: ProductRepository) {
 * ✅ Sets the tenant ID on entities before save
 * ✅ Filters all JPA queries by the current tenant
 * ✅ Manages tenant context from JWT tokens
+
+[NOTE]
+====
+*No JWT?* You can still use this starter! If you do not use JWT authentication, you must ensure the tenant context is set for each request. You can do this by:
+
+- Providing the `X-Tenant-ID` header in each request, or
+- Setting the tenant context programmatically (see Usage Guide below)
+====
 
 == 📚 Full Working Example
 
@@ -94,7 +135,7 @@ class ProductService(private val productRepository: ProductRepository) {
 * ✅ *Zero-code tenant isolation* - JPA repositories automatically filtered
 * ✅ *PostgreSQL Row-Level Security (RLS)* - Database-level security
 * ✅ *Automatic tenant context* - Extracted from JWT tokens
-* ✅ *Two-datasource pattern* - Admin for migrations, tenant for queries
+* ✅ *Two-datasource pattern* - Admin for cross-tenant operations (e.g. reports), tenant datasource for tenant specific ops
 * ✅ *Automatic RLS setup* - Repeatable Flyway migration enables RLS
 * ✅ *Multi-tenant users* - Support users with access to multiple tenants
 * ✅ *Type-safe* - Works with Spring Data JPA
@@ -133,6 +174,8 @@ multitenancy:
     exclude-tables:                          # Tables to skip RLS
       - flyway_schema_history
       - audit_log
+  tenant-interceptor:
+    enabled: true                            # Default: true. Set to false to disable the default TenantInterceptor and provide your own.
 ----
 
 == Usage Guide
@@ -217,6 +260,41 @@ The starter provides a `TenantInterceptor` that *automatically*:
 ----
 X-Tenant-ID: 11111111-1111-1111-1111-111111111111
 ----
+
+=== Setting Tenant Context Programmatically (No JWT)
+
+If you do not use JWT, you can set the tenant context yourself. For example, in a filter or interceptor:
+
+[source,kotlin]
+----
+@Component
+class TenantContextFilter : OncePerRequestFilter() {
+    override fun doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, filterChain: FilterChain) {
+        val tenantId = request.getHeader("X-Tenant-ID")?.let { UUID.fromString(it) }
+        if (tenantId != null) {
+            TenantContext.setTenantId(tenantId)
+        }
+        try {
+            filterChain.doFilter(request, response)
+        } finally {
+            TenantContext.clear()
+        }
+    }
+}
+----
+
+This ensures the correct tenant is set for each request, even without JWT.
+
+=== Opting Out of the Default TenantInterceptor
+
+By default, the starter registers a TenantInterceptor to extract and enforce tenant context on every request. If you want to provide your own interceptor or disable this behavior (for example, to implement custom logic), you can opt out by setting the following property in your `application.properties` or `application.yml`:
+
+[source,properties]
+----
+multitenancy.tenant-interceptor.enabled=false
+----
+
+When this property is set to `false`, the default TenantInterceptor and its WebMvcConfigurer will not be registered. You are then responsible for handling tenant context in your own code.
 
 == Database Setup
 
@@ -420,4 +498,3 @@ class MyTest {
 == License
 
 [Your License Here]
-

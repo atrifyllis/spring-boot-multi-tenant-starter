@@ -17,7 +17,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 @AutoConfiguration
 @ConditionalOnProperty(
     prefix = "multitenancy",
-    name = ["enabled"],
+    name = ["enabled", "tenant-interceptor.enabled"],
     havingValue = "true",
     matchIfMissing = true,
 )
