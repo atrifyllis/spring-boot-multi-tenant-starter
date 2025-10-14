@@ -47,10 +47,11 @@ class TenantJpaAutoConfigurationTest {
             )
             .withPropertyValues(
                 "multitenancy.enabled=true",
+                "multitenancy.tenant-jpa-base-package=io.github.atrifyllis.multitenancy",
+                "multitenancy.admin-jpa-packages-to-scan=io.github.atrifyllis.multitenancy.admin",
                 "multitenancy.tenant.datasource.url=${postgresContainer.jdbcUrl}",
                 "multitenancy.tenant.datasource.username=${postgresContainer.username}",
                 "multitenancy.tenant.datasource.password=${postgresContainer.password}",
-                "multitenancy.tenant-jpa-base-package=io.github.atrifyllis.multitenancy",
                 "spring.flyway.enabled=false",
             )
 

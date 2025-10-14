@@ -8,5 +8,11 @@ data class MultitenancyProperties(
     /**
      * The base package to scan for JPA entities and repositories.
      */
-    val tenantJpaBasePackage: String
+    val tenantJpaBasePackage: String,
+    /**
+     * Packages to scan for admin datasource JPA entities.
+     * Can be a comma-separated list of package names.
+     */
+    val adminJpaPackagesToScan: String
 )
+

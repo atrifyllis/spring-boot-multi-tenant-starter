@@ -17,6 +17,8 @@ class AdminDataSourceAutoConfigurationTest {
             .withConfiguration(AutoConfigurations.of(AdminDataSourceAutoConfiguration::class.java))
             .withPropertyValues(
                 "multitenancy.enabled=true",
+                "multitenancy.tenant-jpa-base-package=io.github.atrifyllis.multitenancy",
+                "multitenancy.admin-jpa-packages-to-scan=io.github.atrifyllis.multitenancy.admin",
                 "multitenancy.admin.datasource.url=jdbc:h2:mem:admintest;DB_CLOSE_DELAY=-1",
                 "multitenancy.admin.datasource.username=sa",
                 "multitenancy.admin.datasource.password=",
@@ -74,7 +76,11 @@ class AdminDataSourceAutoConfigurationTest {
     fun `admin disabled when URL missing`() {
         ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(AdminDataSourceAutoConfiguration::class.java))
-            .withPropertyValues("multitenancy.enabled=true")
+            .withPropertyValues(
+                "multitenancy.enabled=true",
+                "multitenancy.tenant-jpa-base-package=io.github.atrifyllis.multitenancy",
+                "multitenancy.admin-jpa-packages-to-scan=io.github.atrifyllis.multitenancy.admin"
+            )
             .run { ctx ->
                 assertThat(ctx.containsBean("adminDataSource")).isFalse()
                 assertThat(ctx.containsBean("adminEntityManagerFactory")).isFalse()

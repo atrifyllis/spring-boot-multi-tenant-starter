@@ -41,7 +41,7 @@ import org.springframework.transaction.PlatformTransactionManager
  * Regular application code should use JPA repositories which use the tenant datasource.
  */
 @AutoConfiguration
-@EnableConfigurationProperties(JooqProperties::class)
+@EnableConfigurationProperties(JooqProperties::class, MultitenancyProperties::class)
 @ConditionalOnProperty(
     prefix = "multitenancy",
     name = ["enabled"],
@@ -103,10 +103,11 @@ class AdminDataSourceAutoConfiguration {
     @ConditionalOnBean(name = ["adminDataSource"])
     @ConditionalOnMissingBean(name = ["adminEntityManagerFactory"])
     fun adminEntityManagerFactory(
-        @Qualifier("adminDataSource") admin: DataSource
+        @Qualifier("adminDataSource") admin: DataSource,
+        multitenancyProperties: MultitenancyProperties
     ): LocalContainerEntityManagerFactoryBean {
         val emf = LocalContainerEntityManagerFactoryBean().apply { dataSource = admin }
-        emf.setPackagesToScan("io.ktri.expense.tracker.admin")
+        emf.setPackagesToScan(*multitenancyProperties.adminJpaPackagesToScan.split(",").map { it.trim() }.toTypedArray())
         emf.persistenceUnitName = "adminDatasource"
         emf.jpaVendorAdapter = HibernateJpaVendorAdapter()
         return emf
