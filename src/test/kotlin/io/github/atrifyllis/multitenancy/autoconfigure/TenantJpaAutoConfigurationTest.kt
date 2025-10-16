@@ -110,6 +110,17 @@ class TenantJpaAutoConfigurationTest {
             }
     }
 
+    @Test
+    fun `applies JpaProperties to tenant EntityManagerFactory`() {
+        defaultRunner()
+            .withPropertyValues("spring.jpa.properties.hibernate.show_sql=true")
+            .run { ctx ->
+                val emf = ctx.getBean("&tenantEntityManagerFactory", LocalContainerEntityManagerFactoryBean::class.java)
+                val props = emf.jpaPropertyMap
+                assertThat(props).containsEntry("hibernate.show_sql", "true")
+            }
+    }
+
     @Configuration
     private class UserDsConfig {
         @Bean(name = ["tenantDataSource"])

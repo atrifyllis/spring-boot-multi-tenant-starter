@@ -17,8 +17,8 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
 import org.springframework.orm.jpa.JpaTransactionManager
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean
-import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter
 import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder
 
 /**
  * Autoconfigures the tenant (application) DataSource and JPA stack. Mirrors core DataSourceConfig
@@ -82,13 +82,13 @@ class TenantJpaAutoConfiguration(
     @Primary
     @ConditionalOnMissingBean(name = ["tenantEntityManagerFactory"])
     fun tenantEntityManagerFactory(
+        builder: EntityManagerFactoryBuilder,
         dataSource: DataSource
     ): LocalContainerEntityManagerFactoryBean {
-        val entityManager =
-            LocalContainerEntityManagerFactoryBean().apply { this.dataSource = dataSource }
-        entityManager.setPackagesToScan(multitenancyProperties.tenantJpaBasePackage)
-        entityManager.persistenceUnitName = "tenantDatasource"
-        entityManager.jpaVendorAdapter = HibernateJpaVendorAdapter()
-        return entityManager
+        return builder
+            .dataSource(dataSource)
+            .packages(multitenancyProperties.tenantJpaBasePackage)
+            .persistenceUnit("tenantDatasource")
+            .build()
     }
 }

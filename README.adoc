@@ -235,6 +235,11 @@ interface UserRepository : JpaRepository<User, UUID> {
 class JpaConfig
 ----
 
+[NOTE]
+====
+The tenant `EntityManagerFactory` honors all standard `JpaProperties` (e.g., `spring.jpa.properties.hibernate.dialect`, `spring.jpa.show-sql`), ensuring consistent JPA configuration between admin and tenant persistence units.
+====
+
 === Tenant Context (Automatic)
 
 The starter provides a `TenantInterceptor` that *automatically*:
