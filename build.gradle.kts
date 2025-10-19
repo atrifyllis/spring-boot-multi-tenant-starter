@@ -76,15 +76,9 @@ tasks.withType<Test> { useJUnitPlatform() }
 ktfmt { kotlinLangStyle() }
 
 // Minimal configuration for JitPack
-publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            from(components["java"])
-        }
-    }
-}
+publishing { publications { create<MavenPublication>("maven") { from(components["java"]) } } }
 
-//for jitpack
+// for jitpack
 java {
     withSourcesJar()
     withJavadocJar()
