@@ -1,11 +1,11 @@
 [versions]
-kotlin = "2.1.20"
+kotlin = "2.2.20"
 dependencyManagement = "1.1.7"
-kotlinLogging = "7.0.5"
-springBoot = "3.4.4"
-jooq = "3.20.2"
-ktfmt = "0.22.0"
-testContainersPostgres = "1.20.6"
+kotlinLogging = "7.0.13"
+springBoot = "3.5.6"
+jooq = "3.20.8"
+ktfmt = "0.24.0"
+testContainersPostgres = "1.21.3"
 
 
 
