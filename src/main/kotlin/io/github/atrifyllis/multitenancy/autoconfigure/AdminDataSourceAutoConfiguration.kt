@@ -31,9 +31,8 @@ import org.springframework.transaction.PlatformTransactionManager
 /**
  * Autoconfigures admin DataSource + jOOQ + JPA, mirroring core with minimal conditions.
  *
- * ⚠️ SECURITY WARNING:
- * The beans configured here (especially jOOQ's DSLContext) BYPASS Row-Level Security (RLS).
- * They should ONLY be used for:
+ * ⚠️ SECURITY WARNING: The beans configured here (especially jOOQ's DSLContext) BYPASS Row-Level
+ * Security (RLS). They should ONLY be used for:
  * - Cross-tenant operations (admin features)
  * - Database migrations (Flyway)
  * - Internal library operations
@@ -52,12 +51,12 @@ class AdminDataSourceAutoConfiguration {
     @Bean
     @ConfigurationProperties(prefix = "multitenancy.admin.datasource")
     @ConditionalOnMissingBean(name = ["adminDataSourceProperties"])
-    //@Primary // TODO remove when tenant datasource is migrated
+    // @Primary // TODO remove when tenant datasource is migrated
 
     fun adminDataSourceProperties(): DataSourceProperties = DataSourceProperties()
 
     @Bean(name = ["adminDataSource"])
-    //@Primary // TODO remove when tenant datasource is migrated
+    // @Primary // TODO remove when tenant datasource is migrated
     @FlywayDataSource
     @ConditionalOnMissingBean(name = ["adminDataSource"])
     @ConditionalOnProperty(prefix = "multitenancy.admin.datasource", name = ["url"])
@@ -70,8 +69,8 @@ class AdminDataSourceAutoConfiguration {
 
     // jOOQ wiring against admin DS
     /**
-     * ⚠️ WARNING: Configures jOOQ to use admin datasource which BYPASSES RLS.
-     * Do NOT inject DSLContext in regular services unless you explicitly need cross-tenant access.
+     * ⚠️ WARNING: Configures jOOQ to use admin datasource which BYPASSES RLS. Do NOT inject
+     * DSLContext in regular services unless you explicitly need cross-tenant access.
      */
     @Bean
     @ConditionalOnClass(DefaultConfiguration::class)
@@ -86,9 +85,7 @@ class AdminDataSourceAutoConfiguration {
             config.set(DefaultAnnotatedPojoMemberProvider())
         }
 
-    /**
-     * ⚠️ WARNING: This connection provider uses admin datasource which BYPASSES RLS.
-     */
+    /** ⚠️ WARNING: This connection provider uses admin datasource which BYPASSES RLS. */
     @Bean
     @ConditionalOnClass(DefaultConfiguration::class)
     @ConditionalOnBean(name = ["adminDataSource"])
@@ -104,10 +101,15 @@ class AdminDataSourceAutoConfiguration {
     @ConditionalOnMissingBean(name = ["adminEntityManagerFactory"])
     fun adminEntityManagerFactory(
         @Qualifier("adminDataSource") admin: DataSource,
-        multitenancyProperties: MultitenancyProperties
+        multitenancyProperties: MultitenancyProperties,
     ): LocalContainerEntityManagerFactoryBean {
         val emf = LocalContainerEntityManagerFactoryBean().apply { dataSource = admin }
-        emf.setPackagesToScan(*multitenancyProperties.adminJpaPackagesToScan.split(",").map { it.trim() }.toTypedArray())
+        emf.setPackagesToScan(
+            *multitenancyProperties.adminJpaPackagesToScan
+                .split(",")
+                .map { it.trim() }
+                .toTypedArray()
+        )
         emf.persistenceUnitName = "adminDatasource"
         emf.jpaVendorAdapter = HibernateJpaVendorAdapter()
         return emf

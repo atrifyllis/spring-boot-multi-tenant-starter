@@ -12,10 +12,7 @@ class TestSecurityConfig {
 
     @Bean
     fun testSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
-        http
-            .csrf { it.disable() }
-            .authorizeHttpRequests { it.anyRequest().permitAll() }
+        http.csrf { it.disable() }.authorizeHttpRequests { it.anyRequest().permitAll() }
         return http.build()
     }
 }
-

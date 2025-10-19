@@ -21,7 +21,8 @@ class TenantInterceptor : HandlerInterceptor {
         response: HttpServletResponse,
         handler: Any,
     ): Boolean {
-        (SecurityContextHolder.getContext().authentication as? JwtAuthenticationToken)?.let { jwtAuthenticationToken ->
+        (SecurityContextHolder.getContext().authentication as? JwtAuthenticationToken)?.let {
+            jwtAuthenticationToken ->
             log.info { "TenantInterceptor: ${jwtAuthenticationToken.token}" }
             log.info { "TenantInterceptor: ${jwtAuthenticationToken.token.claims["tenantId"]}" }
             (jwtAuthenticationToken.token.claims["tenantId"] as? List<*>)?.let { tenantIds ->
@@ -49,7 +50,7 @@ class TenantInterceptor : HandlerInterceptor {
                 .find { it.toString() == headerTenantId }
                 ?.let { UUID.fromString(it.toString()) }
                 ?: throw TenantIdsDoNotMatchException(
-                    "Tenant ID not found in the JWT token: $headerTenantId",
+                    "Tenant ID not found in the JWT token: $headerTenantId"
                 )
         }
         return tenantIds.firstOrNull()?.let { UUID.fromString(it.toString()) }

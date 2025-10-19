@@ -43,7 +43,7 @@ class TenantJpaAutoConfigurationTest {
                     DataSourceTransactionManagerAutoConfiguration::class.java,
                     HibernateJpaAutoConfiguration::class.java,
                     TenantJpaAutoConfiguration::class.java,
-                ),
+                )
             )
             .withPropertyValues(
                 "multitenancy.enabled=true",
@@ -83,13 +83,14 @@ class TenantJpaAutoConfigurationTest {
     fun `does not create JPA beans when JPA not on classpath`() {
         defaultRunner()
             .withClassLoader(
-                FilteredClassLoader(LocalContainerEntityManagerFactoryBean::class.java),
+                FilteredClassLoader(LocalContainerEntityManagerFactoryBean::class.java)
             )
             .run { ctx ->
                 // The entire TenantJpaAutoConfiguration should back off when JPA is missing
                 assertThat(ctx).doesNotHaveBean("tenantDataSource")
                 assertThat(ctx).doesNotHaveBean("tenantEntityManagerFactory")
-                // A transactionManager bean may exist (from DataSourceTransactionManagerAutoConfiguration)
+                // A transactionManager bean may exist (from
+                // DataSourceTransactionManagerAutoConfiguration)
                 // but it should NOT be a JpaTransactionManager
                 if (ctx.containsBean("transactionManager")) {
                     val tx = ctx.getBean("transactionManager")
@@ -112,13 +113,16 @@ class TenantJpaAutoConfigurationTest {
 
     @Test
     fun `applies JpaProperties to tenant EntityManagerFactory`() {
-        defaultRunner()
-            .withPropertyValues("spring.jpa.properties.hibernate.show_sql=true")
-            .run { ctx ->
-                val emf = ctx.getBean("&tenantEntityManagerFactory", LocalContainerEntityManagerFactoryBean::class.java)
-                val props = emf.jpaPropertyMap
-                assertThat(props).containsEntry("hibernate.show_sql", "true")
-            }
+        defaultRunner().withPropertyValues("spring.jpa.properties.hibernate.show_sql=true").run {
+            ctx ->
+            val emf =
+                ctx.getBean(
+                    "&tenantEntityManagerFactory",
+                    LocalContainerEntityManagerFactoryBean::class.java,
+                )
+            val props = emf.jpaPropertyMap
+            assertThat(props).containsEntry("hibernate.show_sql", "true")
+        }
     }
 
     @Configuration

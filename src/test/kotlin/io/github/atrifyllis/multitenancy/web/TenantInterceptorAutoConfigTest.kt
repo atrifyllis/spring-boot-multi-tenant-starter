@@ -10,7 +10,6 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 
-
 class TenantInterceptorAutoConfigTest : BasePostgresTest() {
     @Autowired lateinit var mockMvc: MockMvc
 
@@ -54,7 +53,12 @@ class TenantInterceptorAutoConfigTest : BasePostgresTest() {
                 // The interceptor throws an exception, which results in a 500 error
                 // This is the expected behavior
                 assertThat(e).isInstanceOf(jakarta.servlet.ServletException::class.java)
-                assertThat(e.cause).isInstanceOf(io.github.atrifyllis.multitenancy.application.service.TenantIdsDoNotMatchException::class.java)
+                assertThat(e.cause)
+                    .isInstanceOf(
+                        io.github.atrifyllis.multitenancy.application.service
+                                .TenantIdsDoNotMatchException::class
+                            .java
+                    )
                 return
             }
 

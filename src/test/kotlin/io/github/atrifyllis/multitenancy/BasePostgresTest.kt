@@ -17,7 +17,6 @@ import org.testcontainers.junit.jupiter.Testcontainers
 @AutoConfigureMockMvc // autowire MockMvc
 class BasePostgresTest {
 
-
     companion object {
 
         //        @Container
@@ -44,8 +43,12 @@ class BasePostgresTest {
             registry.add("multitenancy.tenant.datasource.username", postgresContainer::getUsername)
             registry.add("multitenancy.tenant.datasource.password", postgresContainer::getPassword)
 
-            registry.add("multitenancy.tenant-jpa-base-package") { "io.github.atrifyllis.multitenancy" }
-            registry.add("multitenancy.admin-jpa-packages-to-scan") { "io.github.atrifyllis.multitenancy.admin" }
+            registry.add("multitenancy.tenant-jpa-base-package") {
+                "io.github.atrifyllis.multitenancy"
+            }
+            registry.add("multitenancy.admin-jpa-packages-to-scan") {
+                "io.github.atrifyllis.multitenancy.admin"
+            }
         }
     }
 
@@ -54,5 +57,4 @@ class BasePostgresTest {
 
         TenantContext.clear()
     }
-
 }

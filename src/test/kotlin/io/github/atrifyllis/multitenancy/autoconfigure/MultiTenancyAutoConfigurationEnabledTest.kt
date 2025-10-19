@@ -11,7 +11,7 @@ class MultiTenancyAutoConfigurationEnabledTest {
             .withConfiguration(AutoConfigurations.of(MultiTenancyAutoConfiguration::class.java))
             .withPropertyValues(
                 "multitenancy.tenant-jpa-base-package=io.github.atrifyllis.multitenancy",
-                "multitenancy.admin-jpa-packages-to-scan=io.github.atrifyllis.multitenancy.admin"
+                "multitenancy.admin-jpa-packages-to-scan=io.github.atrifyllis.multitenancy.admin",
             )
 
     @Test

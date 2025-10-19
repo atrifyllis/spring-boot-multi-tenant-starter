@@ -13,25 +13,22 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties
 import org.springframework.boot.autoconfigure.transaction.TransactionManagerCustomizers
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
 import org.springframework.orm.jpa.JpaTransactionManager
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean
 import org.springframework.transaction.PlatformTransactionManager
-import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder
 
 /**
  * Autoconfigures the tenant (application) DataSource and JPA stack. Mirrors core DataSourceConfig
  * with minimal differences and safe conditionals.
  *
- * Note: This configuration does NOT enable JPA repositories scanning.
- * The consuming application should add @EnableJpaRepositories in their own configuration:
+ * Note: This configuration does NOT enable JPA repositories scanning. The consuming application
+ * should add @EnableJpaRepositories in their own configuration:
  *
- * @EnableJpaRepositories(
- *     entityManagerFactoryRef = "tenantEntityManagerFactory",
- *     transactionManagerRef = "transactionManager",
- *     basePackages = ["com.yourapp.repositories"]
- * )
+ * @EnableJpaRepositories( entityManagerFactoryRef = "tenantEntityManagerFactory",
+ *   transactionManagerRef = "transactionManager", basePackages = ["com.yourapp.repositories"] )
  */
 @EnableConfigurationProperties(MultitenancyProperties::class)
 @AutoConfiguration
@@ -42,9 +39,7 @@ import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder
     havingValue = "true",
     matchIfMissing = true,
 )
-class TenantJpaAutoConfiguration(
-    private val multitenancyProperties: MultitenancyProperties
-) {
+class TenantJpaAutoConfiguration(private val multitenancyProperties: MultitenancyProperties) {
 
     @Bean
     @Primary
@@ -56,9 +51,7 @@ class TenantJpaAutoConfiguration(
     @Primary
     @ConfigurationProperties(prefix = "multitenancy.tenant.datasource.hikari")
     @ConditionalOnMissingBean(name = ["tenantDataSource"])
-    fun tenantDataSource(
-        props: DataSourceProperties
-    ): DataSource {
+    fun tenantDataSource(props: DataSourceProperties): DataSource {
         val dataSource =
             props.initializeDataSourceBuilder().type(HikariDataSource::class.java).build()
         return TenantAwareDataSource(dataSource)
@@ -83,7 +76,7 @@ class TenantJpaAutoConfiguration(
     @ConditionalOnMissingBean(name = ["tenantEntityManagerFactory"])
     fun tenantEntityManagerFactory(
         builder: EntityManagerFactoryBuilder,
-        dataSource: DataSource
+        dataSource: DataSource,
     ): LocalContainerEntityManagerFactoryBean {
         return builder
             .dataSource(dataSource)

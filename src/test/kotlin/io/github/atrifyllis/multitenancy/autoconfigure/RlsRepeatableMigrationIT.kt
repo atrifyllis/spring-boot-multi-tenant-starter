@@ -40,14 +40,15 @@ class RlsRepeatableMigrationIT {
     private lateinit var dataSource: HikariDataSource
 
     // Common properties used in both tests
-    private val commonProps = arrayOf(
-        "multitenancy.enabled=true",
-        "multitenancy.rls.enabled=true",
-        "multitenancy.rls.schema=public",
-        "multitenancy.rls.tenant-column=tenant_id",
-        "multitenancy.rls.policy-name=tenant_isolation_policy",
-        "multitenancy.rls.exclude-tables=excluded,flyway_schema_history",
-    )
+    private val commonProps =
+        arrayOf(
+            "multitenancy.enabled=true",
+            "multitenancy.rls.enabled=true",
+            "multitenancy.rls.schema=public",
+            "multitenancy.rls.tenant-column=tenant_id",
+            "multitenancy.rls.policy-name=tenant_isolation_policy",
+            "multitenancy.rls.exclude-tables=excluded,flyway_schema_history",
+        )
 
     @BeforeAll
     fun setup() {
@@ -72,11 +73,10 @@ class RlsRepeatableMigrationIT {
     @Test
     fun `repeatable migration enables RLS and creates policy for included tables only`() {
         // First migration with first timestamp
-        withFlyway { flyway ->
-            flyway.migrate()
-        }
+        withFlyway { flyway -> flyway.migrate() }
 
-        // Ensure ${migration_timestamp} placeholder resolves differently between runs (milliseconds precision)
+        // Ensure ${migration_timestamp} placeholder resolves differently between runs (milliseconds
+        // precision)
         Thread.sleep(10)
 
         // Second migration with different timestamp (repeatability check)
@@ -99,11 +99,14 @@ class RlsRepeatableMigrationIT {
             assertThat(policyExists(conn, "public", "no_tenant_col", "tenant_isolation_policy"))
                 .isFalse()
             // Check that repeatable migration is present in flyway_schema_history
-            val repeatableApplied = conn.prepareStatement(
-                "SELECT count(*) FROM flyway_schema_history WHERE type = 'R' AND description = 'enforce rls'",
-            ).use { ps ->
-                ps.executeQuery().use { rs -> if (rs.next()) rs.getInt(1) else 0 }
-            }
+            val repeatableApplied =
+                conn
+                    .prepareStatement(
+                        "SELECT count(*) FROM flyway_schema_history WHERE type = 'R' AND description = 'enforce rls'"
+                    )
+                    .use { ps ->
+                        ps.executeQuery().use { rs -> if (rs.next()) rs.getInt(1) else 0 }
+                    }
             assertThat(repeatableApplied).isGreaterThanOrEqualTo(0)
         }
     }
@@ -113,14 +116,13 @@ class RlsRepeatableMigrationIT {
         val tableName = "new_included"
 
         // First migrate
-        withFlyway { flyway ->
-            flyway.migrate()
-        }
+        withFlyway { flyway -> flyway.migrate() }
 
         // Create a new table to be picked up by the repeatable migration
         createTempTable(tableName)
 
-        // Ensure ${migration_timestamp} placeholder resolves differently between runs (milliseconds precision)
+        // Ensure ${migration_timestamp} placeholder resolves differently between runs (milliseconds
+        // precision)
         Thread.sleep(10)
 
         // Second migrate should re-apply repeatables and configure the new table
@@ -132,14 +134,8 @@ class RlsRepeatableMigrationIT {
         try {
             // Verify policy and RLS are applied on the new table
             dataSource.connection.use { conn ->
-                assertThat(
-                    policyExists(
-                        conn,
-                        "public",
-                        tableName,
-                        "tenant_isolation_policy",
-                    ),
-                ).isTrue()
+                assertThat(policyExists(conn, "public", tableName, "tenant_isolation_policy"))
+                    .isTrue()
                 assertThat(rlsEnabled(conn, "public", tableName)).isTrue()
             }
         } finally {
@@ -168,7 +164,7 @@ class RlsRepeatableMigrationIT {
     ): Boolean =
         conn
             .prepareStatement(
-                "SELECT 1 FROM pg_policies WHERE schemaname=? AND tablename=? AND policyname=?",
+                "SELECT 1 FROM pg_policies WHERE schemaname=? AND tablename=? AND policyname=?"
             )
             .use { ps ->
                 ps.setString(1, schema)
@@ -187,7 +183,7 @@ class RlsRepeatableMigrationIT {
                 JOIN pg_namespace n ON n.oid = c.relnamespace
                 WHERE n.nspname = ? AND c.relname = ?
                 """
-                    .trimIndent(),
+                    .trimIndent()
             )
             .use { ps ->
                 ps.setString(1, schema)
@@ -213,11 +209,10 @@ class RlsRepeatableMigrationIT {
                     .locations("classpath:db/migration/postgresql")
                     .baselineOnMigrate(true)
                     .placeholderReplacement(true)
-                    // Generate fresh timestamp for each Flyway instance to ensure repeatables re-run
+                    // Generate fresh timestamp for each Flyway instance to ensure repeatables
+                    // re-run
                     .placeholders(
-                        mapOf(
-                            "migration_timestamp" to System.currentTimeMillis().toString(),
-                        ),
+                        mapOf("migration_timestamp" to System.currentTimeMillis().toString())
                     )
             customizer.customize(fluent)
             val flyway = fluent.load()

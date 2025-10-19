@@ -12,13 +12,14 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RestController
 
 @SpringBootApplication(
-    exclude = [
-        DataSourceAutoConfiguration::class,
-        HibernateJpaAutoConfiguration::class,
-        TenantJpaAutoConfiguration::class,
-        AdminDataSourceAutoConfiguration::class,
-        RlsAutoConfiguration::class,
-    ],
+    exclude =
+        [
+            DataSourceAutoConfiguration::class,
+            HibernateJpaAutoConfiguration::class,
+            TenantJpaAutoConfiguration::class,
+            AdminDataSourceAutoConfiguration::class,
+            RlsAutoConfiguration::class,
+        ]
 )
 class TestApplication
 

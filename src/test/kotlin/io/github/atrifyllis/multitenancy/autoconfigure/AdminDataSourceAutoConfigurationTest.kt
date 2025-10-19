@@ -79,7 +79,7 @@ class AdminDataSourceAutoConfigurationTest {
             .withPropertyValues(
                 "multitenancy.enabled=true",
                 "multitenancy.tenant-jpa-base-package=io.github.atrifyllis.multitenancy",
-                "multitenancy.admin-jpa-packages-to-scan=io.github.atrifyllis.multitenancy.admin"
+                "multitenancy.admin-jpa-packages-to-scan=io.github.atrifyllis.multitenancy.admin",
             )
             .run { ctx ->
                 assertThat(ctx.containsBean("adminDataSource")).isFalse()
