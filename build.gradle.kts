@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlinPluginKapt)
     alias(libs.plugins.springDepManagement)
     alias(libs.plugins.ktfmt)
+    id("maven-publish")
 }
 
 group = "io.github.atrifyllis"
@@ -20,7 +21,7 @@ repositories { mavenCentral() }
 dependencyManagement {
     imports {
         mavenBom(
-            "org.springframework.boot:spring-boot-dependencies:${libs.versions.springBoot.get()}",
+            "org.springframework.boot:spring-boot-dependencies:${libs.versions.springBoot.get()}"
         )
     }
 }
@@ -73,3 +74,12 @@ kotlin { compilerOptions { freeCompilerArgs.addAll("-Xjsr305=strict") } }
 tasks.withType<Test> { useJUnitPlatform() }
 
 ktfmt { kotlinLangStyle() }
+
+// Minimal configuration for JitPack
+publishing { publications { create<MavenPublication>("maven") { from(components["java"]) } } }
+
+// for jitpack
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
