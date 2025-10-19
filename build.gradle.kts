@@ -83,3 +83,9 @@ publishing {
         }
     }
 }
+
+//for jitpack
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
