@@ -5,7 +5,7 @@ kotlinLogging = "7.0.5"
 springBoot = "3.4.4"
 jooq = "3.20.2"
 ktfmt = "0.22.0"
-testContainersPostgres = "1.20.6"
+testContainersPostgres = "1.21.3"
 
 
 
