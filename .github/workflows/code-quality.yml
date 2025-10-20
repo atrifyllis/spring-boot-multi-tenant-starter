@@ -1,0 +1,7 @@
+name: Code Quality
+on:
+  push:
+    branches: '**'
+jobs:
+  code-quality-verification:
+    uses: KTRI-Industries/.github/.github/workflows/ktri-verify-commit-messages.yml@main
