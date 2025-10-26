@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.kotlinPluginSpring)
     alias(libs.plugins.kotlinPluginKapt)
     alias(libs.plugins.springDepManagement)
-    alias(libs.plugins.ktfmt)
+//    alias(libs.plugins.ktfmt)
     id("maven-publish")
 }
 
@@ -73,7 +73,7 @@ kotlin { compilerOptions { freeCompilerArgs.addAll("-Xjsr305=strict") } }
 
 tasks.withType<Test> { useJUnitPlatform() }
 
-ktfmt { kotlinLangStyle() }
+//ktfmt { kotlinLangStyle() }
 
 // Minimal configuration for JitPack
 publishing { publications { create<MavenPublication>("maven") { from(components["java"]) } } }
