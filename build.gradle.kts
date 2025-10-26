@@ -67,6 +67,9 @@ dependencies {
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation(libs.testContainersPostgres)
     testImplementation("org.postgresql:postgresql")
+
+    // TODO Required for JUnit Platform 1.10+ to avoid "OutputDirectoryProvider not available" error
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 kotlin { compilerOptions { freeCompilerArgs.addAll("-Xjsr305=strict") } }
