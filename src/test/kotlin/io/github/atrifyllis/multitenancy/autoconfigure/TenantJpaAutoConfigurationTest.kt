@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.boot.autoconfigure.AutoConfigurations
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
 import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
+import org.springframework.boot.autoconfigure.orm.jpa.EntityManagerFactoryBuilderCustomizer
 import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
 import org.springframework.boot.test.context.FilteredClassLoader
 import org.springframework.boot.test.context.runner.ApplicationContextRunner
@@ -109,6 +110,26 @@ class TenantJpaAutoConfigurationTest {
             }
     }
 
+    @Test
+    fun `applies spring jpa properties and customizers`() {
+        defaultRunner()
+            .withPropertyValues(
+                "spring.jpa.hibernate.ddl-auto=validate",
+                "spring.jpa.properties.hibernate.default_schema=tenant_default",
+            )
+            .withUserConfiguration(JpaCustomizerConfig::class.java)
+            .run { ctx ->
+                val emfBean =
+                    ctx.getBean(
+                        "&tenantEntityManagerFactory",
+                        LocalContainerEntityManagerFactoryBean::class.java,
+                    )
+
+                assertThat(emfBean.jpaPropertyMap["hibernate.hbm2ddl.auto"]).isEqualTo("validate")
+                assertThat(emfBean.jpaPropertyMap["hibernate.default_schema"]).isEqualTo("custom_schema")
+            }
+    }
+
     @Configuration
     private class UserDsConfig {
         @Bean(name = ["tenantDataSource"])
@@ -118,5 +139,14 @@ class TenantJpaAutoConfigurationTest {
                 "sa",
                 "",
             )
+    }
+
+    @Configuration
+    private class JpaCustomizerConfig {
+        @Bean
+        fun tenantBuilderCustomizer(): EntityManagerFactoryBuilderCustomizer =
+            EntityManagerFactoryBuilderCustomizer { builder ->
+                builder.properties(mapOf("hibernate.default_schema" to "custom_schema"))
+            }
     }
 }
