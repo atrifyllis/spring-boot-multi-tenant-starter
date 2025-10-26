@@ -10,9 +10,11 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties
+import org.springframework.boot.autoconfigure.orm.jpa.EntityManagerFactoryBuilderCustomizer
 import org.springframework.boot.autoconfigure.transaction.TransactionManagerCustomizers
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
 import org.springframework.orm.jpa.JpaTransactionManager
@@ -82,13 +84,22 @@ class TenantJpaAutoConfiguration(
     @Primary
     @ConditionalOnMissingBean(name = ["tenantEntityManagerFactory"])
     fun tenantEntityManagerFactory(
-        dataSource: DataSource
+        builder: EntityManagerFactoryBuilder,
+        dataSource: DataSource,
+        customizers: ObjectProvider<EntityManagerFactoryBuilderCustomizer>
     ): LocalContainerEntityManagerFactoryBean {
-        val entityManager =
-            LocalContainerEntityManagerFactoryBean().apply { this.dataSource = dataSource }
-        entityManager.setPackagesToScan(multitenancyProperties.tenantJpaBasePackage)
-        entityManager.persistenceUnitName = "tenantDatasource"
-        entityManager.jpaVendorAdapter = HibernateJpaVendorAdapter()
-        return entityManager
+        val builderAdapter =
+            builder
+                .dataSource(dataSource)
+                .packages(multitenancyProperties.tenantJpaBasePackage)
+                .persistenceUnit("tenantDatasource")
+
+        customizers.orderedStream().forEach { customizer -> customizer.customize(builderAdapter) }
+
+        return builderAdapter.build().also {
+            if (it.jpaVendorAdapter == null) {
+                it.jpaVendorAdapter = HibernateJpaVendorAdapter()
+            }
+        }
     }
 }
