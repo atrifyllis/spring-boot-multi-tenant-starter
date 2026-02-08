@@ -23,7 +23,7 @@ A Spring Boot starter that provides *automatic multi-tenant data isolation* usin
 [source,kotlin]
 ----
 dependencies {
-    implementation("io.github.atrifyllis:spring-boot-multi-tenant-starter:0.0.1-SNAPSHOT")
+    implementation("com.github.atrifyllis:spring-boot-multi-tenant-starter:0.0.1-SNAPSHOT")
 }
 ----
 

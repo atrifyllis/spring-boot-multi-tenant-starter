@@ -7,7 +7,7 @@ plugins {
     id("maven-publish")
 }
 
-group = "io.github.atrifyllis"
+group = "com.github.atrifyllis"
 
 version = "0.0.1-SNAPSHOT"
 
