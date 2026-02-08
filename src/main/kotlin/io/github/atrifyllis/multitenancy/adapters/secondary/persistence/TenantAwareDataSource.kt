@@ -3,13 +3,11 @@ package io.github.atrifyllis.multitenancy.adapters.secondary.persistence
 import io.github.atrifyllis.multitenancy.application.service.TenantContext
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
+import java.lang.reflect.Proxy
 import java.sql.Connection
 import java.sql.SQLException
 import java.util.*
 import javax.sql.DataSource
-import net.bytebuddy.ByteBuddy
-import net.bytebuddy.implementation.InvocationHandlerAdapter
-import net.bytebuddy.matcher.ElementMatchers.isDeclaredBy
 import org.springframework.jdbc.datasource.DelegatingDataSource
 
 /** Tenant-Aware Datasource that decorates Connections with current tenant information. */
@@ -44,15 +42,11 @@ class TenantAwareDataSource(private val targetDataSource: DataSource) :
     }
 
     private fun getTenantAwareConnectionProxy(connection: Connection): Connection {
-        val dynamicType =
-            ByteBuddy()
-                .subclass(Connection::class.java)
-                .method(isDeclaredBy(Connection::class.java))
-                .intercept(InvocationHandlerAdapter.of(TenantAwareInvocationHandler(connection)))
-                .make()
-
-        val proxyClass = dynamicType.load(javaClass.classLoader).loaded
-        return proxyClass.getDeclaredConstructor().newInstance() as Connection
+        return Proxy.newProxyInstance(
+            javaClass.classLoader,
+            arrayOf(Connection::class.java),
+            TenantAwareInvocationHandler(connection)
+        ) as Connection
     }
 
     // Connection Proxy invocation handler that intercepts close() to reset the tenant_id
