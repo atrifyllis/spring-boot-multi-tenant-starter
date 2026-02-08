@@ -36,7 +36,6 @@ dependencies {
     compileOnly("org.springframework.boot:spring-boot-starter-security")
     compileOnly(libs.jakartaPersistenceApi)
     compileOnly(libs.springJdbc)
-    compileOnly(libs.byteBuddy)
     compileOnly(libs.hikari)
     compileOnly(libs.jooq)
     compileOnly(libs.jooqJpaExtensions)
@@ -55,7 +54,6 @@ dependencies {
 
     testImplementation(libs.jakartaPersistenceApi)
     testImplementation(libs.springJdbc)
-    testImplementation(libs.byteBuddy)
     testImplementation(libs.hikari)
     testImplementation(libs.h2)
     testImplementation(libs.jooq)
