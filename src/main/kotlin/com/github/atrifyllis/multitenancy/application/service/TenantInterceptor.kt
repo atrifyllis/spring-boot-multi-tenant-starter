@@ -7,7 +7,6 @@ import java.util.*
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
 import org.springframework.web.servlet.HandlerInterceptor
-import org.springframework.web.servlet.ModelAndView
 
 private val log = KotlinLogging.logger {}
 
@@ -35,11 +34,11 @@ class TenantInterceptor : HandlerInterceptor {
         return true
     }
 
-    override fun postHandle(
+    override fun afterCompletion(
         request: HttpServletRequest,
         response: HttpServletResponse,
         handler: Any,
-        modelAndView: ModelAndView?,
+        ex: Exception?,
     ) {
         TenantContext.clear()
     }

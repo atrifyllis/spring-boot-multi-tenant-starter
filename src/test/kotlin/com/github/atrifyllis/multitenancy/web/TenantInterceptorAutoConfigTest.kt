@@ -65,4 +65,24 @@ class TenantInterceptorAutoConfigTest : BasePostgresTest() {
         // If we get here without exception, check the response status is 5xx
         assertThat(result.response.status).isGreaterThanOrEqualTo(500)
     }
+
+    @Test
+    fun `clears tenant context even when controller throws`() {
+        val tid1 = UUID.randomUUID().toString()
+
+        try {
+            mockMvc
+                .get("/tenant/error") {
+                    accept = MediaType.TEXT_PLAIN
+                    with(jwt().jwt { jwt -> jwt.claim("tenantId", listOf(tid1)) })
+                }
+                .andReturn()
+        } catch (_: Exception) {
+            // controller throws, continue with assertion on next request
+        }
+
+        val result = mockMvc.get("/tenant") { accept = MediaType.TEXT_PLAIN }.andReturn()
+        assertThat(result.response.status).isEqualTo(200)
+        assertThat(result.response.contentAsString).isBlank()
+    }
 }

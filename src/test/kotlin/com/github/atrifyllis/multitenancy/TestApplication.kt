@@ -29,4 +29,9 @@ class TestTenantController {
     fun getTenant(): String {
         return TenantContext.getTenantId()?.toString() ?: ""
     }
+
+    @GetMapping("/tenant/error", produces = [MediaType.TEXT_PLAIN_VALUE])
+    fun error(): String {
+        throw IllegalStateException("boom")
+    }
 }
