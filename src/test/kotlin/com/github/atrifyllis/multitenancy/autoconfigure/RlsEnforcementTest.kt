@@ -1,15 +1,16 @@
 package com.github.atrifyllis.multitenancy.autoconfigure
 
 import com.github.atrifyllis.multitenancy.BasePostgresTest
-import com.github.atrifyllis.multitenancy.adapters.secondary.persistence.TenantAwareDataSource
 import com.github.atrifyllis.multitenancy.application.service.TenantContext
-import com.zaxxer.hikari.HikariDataSource
 import java.util.*
+import javax.sql.DataSource
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.test.context.TestPropertySource
 
 /**
@@ -18,28 +19,28 @@ import org.springframework.test.context.TestPropertySource
  * Unlike [RlsRepeatableMigrationTest] which only checks that policies are created, this test proves
  * that data inserted by tenant A is invisible to tenant B.
  *
- * Important: RLS policies do not apply to table owners or superusers. This test creates a
- * non-superuser role (`app_user`) for tenant-scoped queries.
+ * The tenant datasource connects as `app_user` (a non-owner role created by the container init
+ * script), so RLS policies are enforced. The admin datasource connects as `core` (the table owner),
+ * which bypasses RLS — used here to insert test data across tenants.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestPropertySource(properties = ["multitenancy.rls.exclude-tables=flyway_schema_history,excluded"])
 class RlsEnforcementTest : BasePostgresTest() {
 
     companion object {
-        private const val APP_USER = "app_user"
-        private const val APP_PASSWORD = "app_password"
         private const val TABLE_NAME = "rls_enforcement_test"
     }
+
+    @Autowired
+    @Qualifier("tenantDataSource")
+    lateinit var tenantDataSource: DataSource
 
     private val tenantA: UUID = UUID.randomUUID()
     private val tenantB: UUID = UUID.randomUUID()
 
-    private lateinit var tenantDataSource: TenantAwareDataSource
-    private lateinit var ownerDataSource: HikariDataSource
-
     @BeforeAll
     fun setupRls() {
-        exec(
+        adminExec(
             """
             CREATE TABLE IF NOT EXISTS $TABLE_NAME (
                 id UUID PRIMARY KEY,
@@ -49,43 +50,14 @@ class RlsEnforcementTest : BasePostgresTest() {
             """
         )
 
-        // Create a non-superuser role (RLS doesn't apply to table owners/superusers)
-        exec(
-            """
-            DO $$ BEGIN
-                IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '$APP_USER') THEN
-                    CREATE ROLE $APP_USER LOGIN PASSWORD '$APP_PASSWORD';
-                END IF;
-            END $$
-            """
-        )
-        exec("GRANT USAGE ON SCHEMA public TO $APP_USER")
-        exec("GRANT SELECT, INSERT, UPDATE, DELETE ON $TABLE_NAME TO $APP_USER")
-
         // Run Flyway to apply RLS policies
         migrate()
-
-        ownerDataSource =
-            HikariDataSource().apply {
-                jdbcUrl = postgresContainer.jdbcUrl
-                username = postgresContainer.username
-                password = postgresContainer.password
-            }
-
-        // Tenant-aware datasource using non-superuser for actual queries
-        val appUserDataSource =
-            HikariDataSource().apply {
-                jdbcUrl = postgresContainer.jdbcUrl
-                username = APP_USER
-                password = APP_PASSWORD
-            }
-        tenantDataSource = TenantAwareDataSource(appUserDataSource)
     }
 
     @AfterEach
     fun cleanupData() {
         TenantContext.clear()
-        exec("DELETE FROM $TABLE_NAME")
+        adminExec("DELETE FROM $TABLE_NAME")
     }
 
     @Test
@@ -170,7 +142,7 @@ class RlsEnforcementTest : BasePostgresTest() {
     }
 
     private fun insertRow(tenantId: UUID, name: String) {
-        ownerDataSource.connection.use { conn ->
+        adminDataSource!!.connection.use { conn ->
             conn.prepareStatement(
                 "INSERT INTO $TABLE_NAME (id, name, tenant_id) VALUES (?, ?, ?)"
             ).use { ps ->
