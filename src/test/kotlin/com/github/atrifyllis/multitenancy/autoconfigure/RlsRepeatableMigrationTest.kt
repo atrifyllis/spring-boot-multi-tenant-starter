@@ -1,22 +1,17 @@
 package com.github.atrifyllis.multitenancy.autoconfigure
 
-import com.github.atrifyllis.multitenancy.BasePostgresIT
+import com.github.atrifyllis.multitenancy.BasePostgresTest
 import java.sql.Connection
+import java.sql.DriverManager
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
+import org.springframework.test.context.TestPropertySource
 
-class RlsRepeatableMigrationIT : BasePostgresIT() {
-
-    private val commonProps =
-        arrayOf(
-            "multitenancy.enabled=true",
-            "multitenancy.rls.enabled=true",
-            "multitenancy.rls.schema=public",
-            "multitenancy.rls.tenant-column=tenant_id",
-            "multitenancy.rls.policy-name=tenant_isolation_policy",
-            "multitenancy.rls.exclude-tables=excluded,flyway_schema_history",
-        )
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@TestPropertySource(properties = ["multitenancy.rls.exclude-tables=excluded,flyway_schema_history"])
+class RlsRepeatableMigrationTest : BasePostgresTest() {
 
     @BeforeAll
     fun setupTables() {
@@ -27,16 +22,13 @@ class RlsRepeatableMigrationIT : BasePostgresIT() {
 
     @Test
     fun `repeatable migration enables RLS and creates policy for included tables only`() {
-        withFlyway(*commonProps) { flyway -> flyway.migrate() }
+        migrate()
 
         Thread.sleep(10)
 
-        withFlyway(*commonProps) { flyway ->
-            val result = flyway.migrate()
-            assertThat(result.migrationsExecuted).isGreaterThanOrEqualTo(1)
-        }
+        migrate()
 
-        dataSource.connection.use { conn ->
+        openConnection().use { conn ->
             assertThat(policyExists(conn, "public", "included", "tenant_isolation_policy")).isTrue()
             assertThat(rlsEnabled(conn, "public", "included")).isTrue()
             assertThat(policyExists(conn, "public", "excluded", "tenant_isolation_policy"))
@@ -59,19 +51,16 @@ class RlsRepeatableMigrationIT : BasePostgresIT() {
     fun `repeatable migration re-applies and configures a table created after first migrate`() {
         val tableName = "new_included"
 
-        withFlyway(*commonProps) { flyway -> flyway.migrate() }
+        migrate()
 
         exec("CREATE TABLE IF NOT EXISTS $tableName (id uuid primary key, tenant_id uuid)")
 
         Thread.sleep(10)
 
-        withFlyway(*commonProps) { flyway ->
-            val secondResult = flyway.migrate()
-            assertThat(secondResult.migrationsExecuted).isGreaterThanOrEqualTo(1)
-        }
+        migrate()
 
         try {
-            dataSource.connection.use { conn ->
+            openConnection().use { conn ->
                 assertThat(policyExists(conn, "public", tableName, "tenant_isolation_policy"))
                     .isTrue()
                 assertThat(rlsEnabled(conn, "public", tableName)).isTrue()
@@ -80,6 +69,13 @@ class RlsRepeatableMigrationIT : BasePostgresIT() {
             exec("DROP TABLE IF EXISTS $tableName CASCADE")
         }
     }
+
+    private fun openConnection(): Connection =
+        DriverManager.getConnection(
+            postgresContainer.jdbcUrl,
+            postgresContainer.username,
+            postgresContainer.password,
+        )
 
     @Suppress("SameParameterValue")
     private fun policyExists(

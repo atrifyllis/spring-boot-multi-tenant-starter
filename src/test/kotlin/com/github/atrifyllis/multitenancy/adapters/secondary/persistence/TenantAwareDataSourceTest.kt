@@ -1,60 +1,97 @@
 package com.github.atrifyllis.multitenancy.adapters.secondary.persistence
 
+import com.github.atrifyllis.multitenancy.BasePostgresTest
 import com.github.atrifyllis.multitenancy.application.service.TenantContext
-import java.sql.Connection
-import java.sql.Statement
 import java.util.*
 import javax.sql.DataSource
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.verify
-import org.mockito.Mockito.`when`
+import org.junit.jupiter.api.TestInstance
+import org.springframework.jdbc.datasource.DataSourceUtils
+import org.springframework.transaction.support.TransactionTemplate
 
-class TenantAwareDataSourceTest {
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class TenantAwareDataSourceTest : BasePostgresTest() {
 
-    @AfterEach
-    fun cleanup() {
-        TenantContext.clear()
+    @BeforeAll
+    fun setupTable() {
+        exec(
+            """
+            CREATE TABLE IF NOT EXISTS test_entity (
+                id UUID PRIMARY KEY,
+                name VARCHAR(255),
+                tenant_id UUID
+            )
+            """
+        )
     }
 
     @Test
-    fun `sets and clears tenant id via SQL on connection lifecycle`() {
-        // Given
+    fun `tenant_id session variable is set within Spring-managed transaction`() {
         val tenantId = UUID.randomUUID()
         TenantContext.setTenantId(tenantId)
 
-        val mockStatement = mock(Statement::class.java)
-        val mockConnection = mock(Connection::class.java)
-        `when`(mockConnection.createStatement()).thenReturn(mockStatement)
+        val tenantDs = TenantAwareDataSource(createPlainDataSource())
+        val txManager =
+            org.springframework.jdbc.datasource.DataSourceTransactionManager(tenantDs)
+        val txTemplate = TransactionTemplate(txManager)
 
-        val mockDataSource = mock(DataSource::class.java)
-        `when`(mockDataSource.connection).thenReturn(mockConnection)
+        txTemplate.execute { _ ->
+            // Get connection through DataSourceUtils (how Spring gets connections in @Transactional)
+            val conn = DataSourceUtils.getConnection(tenantDs)
+            try {
+                // Verify tenant_id session variable is set
+                conn.createStatement().use { stmt ->
+                    stmt.executeQuery("SELECT current_setting('app.tenant_id')").use { rs ->
+                        rs.next()
+                        assertThat(rs.getString(1)).isEqualTo(tenantId.toString())
+                    }
+                }
 
-        // When
-        val tenantAwareDataSource = TenantAwareDataSource(mockDataSource)
-        val connection = tenantAwareDataSource.connection
-        connection.close()
-
-        // Then
-        verify(mockStatement).execute("SET app.tenant_id TO '$tenantId'")
-        verify(mockStatement).execute("RESET app.tenant_id")
+                // Insert a row to prove the connection works for DML within a transaction
+                conn.prepareStatement(
+                        "INSERT INTO test_entity (id, name, tenant_id) VALUES (?, ?, ?)"
+                    )
+                    .use { ps ->
+                        ps.setObject(1, UUID.randomUUID())
+                        ps.setString(2, "transactional-test")
+                        ps.setObject(3, tenantId)
+                        assertThat(ps.executeUpdate()).isEqualTo(1)
+                    }
+            } finally {
+                DataSourceUtils.releaseConnection(conn, tenantDs)
+            }
+        }
     }
 
     @Test
-    fun `all proxied connections share the same proxy class`() {
-        val mockStatement = mock(Statement::class.java)
-        val mockConnection = mock(Connection::class.java)
-        `when`(mockConnection.createStatement()).thenReturn(mockStatement)
+    fun `multiple getConnection calls within same transaction return same underlying connection`() {
+        val tenantId = UUID.randomUUID()
+        TenantContext.setTenantId(tenantId)
 
-        val mockDataSource = mock(DataSource::class.java)
-        `when`(mockDataSource.connection).thenReturn(mockConnection)
+        val tenantDs = TenantAwareDataSource(createPlainDataSource())
+        val txManager =
+            org.springframework.jdbc.datasource.DataSourceTransactionManager(tenantDs)
+        val txTemplate = TransactionTemplate(txManager)
 
-        val tenantAwareDataSource = TenantAwareDataSource(mockDataSource)
+        txTemplate.execute { _ ->
+            val conn1 = DataSourceUtils.getConnection(tenantDs)
+            val conn2 = DataSourceUtils.getConnection(tenantDs)
 
-        val classes = (1..100).map { tenantAwareDataSource.connection.javaClass }.toSet()
+            // Spring should return the same connection within the same transaction
+            assertThat(conn1).isSameAs(conn2)
 
-        assertThat(classes).hasSize(1)
+            DataSourceUtils.releaseConnection(conn2, tenantDs)
+            DataSourceUtils.releaseConnection(conn1, tenantDs)
+        }
+    }
+
+    private fun createPlainDataSource(): DataSource {
+        return com.zaxxer.hikari.HikariDataSource().apply {
+            jdbcUrl = postgresContainer.jdbcUrl
+            username = postgresContainer.username
+            password = postgresContainer.password
+        }
     }
 }

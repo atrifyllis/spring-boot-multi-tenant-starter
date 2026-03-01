@@ -2,7 +2,6 @@ package com.github.atrifyllis.multitenancy
 
 import com.github.atrifyllis.multitenancy.application.service.TenantContext
 import com.github.atrifyllis.multitenancy.autoconfigure.AdminDataSourceAutoConfiguration
-import com.github.atrifyllis.multitenancy.autoconfigure.RlsAutoConfiguration
 import com.github.atrifyllis.multitenancy.autoconfigure.TenantJpaAutoConfiguration
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
@@ -18,7 +17,6 @@ import org.springframework.web.bind.annotation.RestController
             HibernateJpaAutoConfiguration::class,
             TenantJpaAutoConfiguration::class,
             AdminDataSourceAutoConfiguration::class,
-            RlsAutoConfiguration::class,
         ]
 )
 class TestApplication
