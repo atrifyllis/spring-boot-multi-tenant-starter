@@ -1,6 +1,6 @@
 package com.github.atrifyllis.multitenancy.autoconfigure
 
-import com.github.atrifyllis.multitenancy.BasePostgresIT
+import com.github.atrifyllis.multitenancy.BasePostgresTest
 import com.github.atrifyllis.multitenancy.adapters.secondary.persistence.TenantAwareDataSource
 import com.github.atrifyllis.multitenancy.application.service.TenantContext
 import com.zaxxer.hikari.HikariDataSource
@@ -9,17 +9,21 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
+import org.springframework.test.context.TestPropertySource
 
 /**
  * End-to-end test that verifies PostgreSQL Row-Level Security actually enforces tenant isolation.
  *
- * Unlike [RlsRepeatableMigrationIT] which only checks that policies are created, this test proves
+ * Unlike [RlsRepeatableMigrationTest] which only checks that policies are created, this test proves
  * that data inserted by tenant A is invisible to tenant B.
  *
  * Important: RLS policies do not apply to table owners or superusers. This test creates a
  * non-superuser role (`app_user`) for tenant-scoped queries.
  */
-class RlsEnforcementIT : BasePostgresIT() {
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@TestPropertySource(properties = ["multitenancy.rls.exclude-tables=flyway_schema_history,excluded"])
+class RlsEnforcementTest : BasePostgresTest() {
 
     companion object {
         private const val APP_USER = "app_user"
@@ -31,16 +35,7 @@ class RlsEnforcementIT : BasePostgresIT() {
     private val tenantB: UUID = UUID.randomUUID()
 
     private lateinit var tenantDataSource: TenantAwareDataSource
-
-    private val commonProps =
-        arrayOf(
-            "multitenancy.enabled=true",
-            "multitenancy.rls.enabled=true",
-            "multitenancy.rls.schema=public",
-            "multitenancy.rls.tenant-column=tenant_id",
-            "multitenancy.rls.policy-name=tenant_isolation_policy",
-            "multitenancy.rls.exclude-tables=flyway_schema_history,excluded",
-        )
+    private lateinit var ownerDataSource: HikariDataSource
 
     @BeforeAll
     fun setupRls() {
@@ -68,7 +63,14 @@ class RlsEnforcementIT : BasePostgresIT() {
         exec("GRANT SELECT, INSERT, UPDATE, DELETE ON $TABLE_NAME TO $APP_USER")
 
         // Run Flyway to apply RLS policies
-        withFlyway(*commonProps) { flyway -> flyway.migrate() }
+        migrate()
+
+        ownerDataSource =
+            HikariDataSource().apply {
+                jdbcUrl = postgresContainer.jdbcUrl
+                username = postgresContainer.username
+                password = postgresContainer.password
+            }
 
         // Tenant-aware datasource using non-superuser for actual queries
         val appUserDataSource =
@@ -168,7 +170,7 @@ class RlsEnforcementIT : BasePostgresIT() {
     }
 
     private fun insertRow(tenantId: UUID, name: String) {
-        dataSource.connection.use { conn ->
+        ownerDataSource.connection.use { conn ->
             conn.prepareStatement(
                 "INSERT INTO $TABLE_NAME (id, name, tenant_id) VALUES (?, ?, ?)"
             ).use { ps ->
