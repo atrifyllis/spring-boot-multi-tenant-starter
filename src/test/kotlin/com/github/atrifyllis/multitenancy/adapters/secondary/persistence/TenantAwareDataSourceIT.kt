@@ -1,63 +1,28 @@
 package com.github.atrifyllis.multitenancy.adapters.secondary.persistence
 
+import com.github.atrifyllis.multitenancy.BasePostgresIT
 import com.github.atrifyllis.multitenancy.application.service.TenantContext
-import java.time.Duration
 import java.util.*
 import javax.sql.DataSource
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
 import org.springframework.jdbc.datasource.DataSourceUtils
 import org.springframework.transaction.support.TransactionTemplate
-import org.testcontainers.containers.PostgreSQLContainer
-import org.testcontainers.junit.jupiter.Testcontainers
 
-@Testcontainers
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class TenantAwareDataSourceIT {
-
-    companion object {
-        private val postgresContainer: PostgreSQLContainer<*> =
-            PostgreSQLContainer("postgres:16-alpine")
-                .withTmpFs(mapOf("/var/lib/postgresql/data" to "rw"))
-                .withUsername("core")
-                .withPassword("core")
-                .withCommand("postgres", "-c", "fsync=off", "-c", "log_statement=all")
-                .withStartupTimeout(Duration.ofSeconds(90))
-                .withReuse(true)
-
-        init {
-            postgresContainer.start()
-        }
-    }
+class TenantAwareDataSourceIT : BasePostgresIT() {
 
     @BeforeAll
-    fun setup() {
-        java.sql.DriverManager.getConnection(
-                postgresContainer.jdbcUrl,
-                postgresContainer.username,
-                postgresContainer.password,
+    fun setupTable() {
+        exec(
+            """
+            CREATE TABLE IF NOT EXISTS test_entity (
+                id UUID PRIMARY KEY,
+                name VARCHAR(255),
+                tenant_id UUID
             )
-            .use { conn ->
-                conn.createStatement().use { stmt ->
-                    stmt.execute(
-                        """
-                        CREATE TABLE IF NOT EXISTS test_entity (
-                            id UUID PRIMARY KEY,
-                            name VARCHAR(255),
-                            tenant_id UUID
-                        )
-                        """
-                    )
-                }
-            }
-    }
-
-    @AfterEach
-    fun cleanup() {
-        TenantContext.clear()
+            """
+        )
     }
 
     @Test
