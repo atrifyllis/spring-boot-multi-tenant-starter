@@ -1,5 +1,6 @@
 package com.github.atrifyllis.multitenancy.autoconfigure
 
+import com.github.atrifyllis.multitenancy.BasePostgresTest
 import com.github.atrifyllis.multitenancy.adapters.secondary.persistence.TenantAwareDataSource
 import javax.sql.DataSource
 import org.assertj.core.api.Assertions.assertThat
@@ -15,25 +16,10 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.orm.jpa.JpaTransactionManager
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean
 import org.springframework.transaction.PlatformTransactionManager
-import org.testcontainers.containers.PostgreSQLContainer
-import org.testcontainers.junit.jupiter.Testcontainers
 
-@Testcontainers
 class TenantJpaAutoConfigurationTest {
 
-    companion object {
-        private val postgresContainer: PostgreSQLContainer<*> =
-            PostgreSQLContainer("postgres:alpine3.19")
-                .withTmpFs(mapOf("/var/lib/postgresql/data" to "rw"))
-                .withUsername("core")
-                .withPassword("core")
-                .withCommand("postgres", "-c", "fsync=off", "-c", "log_statement=all")
-                .withReuse(true)
-
-        init {
-            postgresContainer.start()
-        }
-    }
+    private val postgresContainer = BasePostgresTest.postgresContainer
 
     private fun defaultRunner(): ApplicationContextRunner =
         ApplicationContextRunner()

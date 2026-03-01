@@ -8,15 +8,25 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.jdbc.datasource.DataSourceUtils
+import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TenantAwareDataSourceTest : BasePostgresTest() {
 
+    @Autowired
+    @Qualifier("tenantDataSource")
+    lateinit var tenantDataSource: DataSource
+
+    @Autowired
+    lateinit var transactionManager: PlatformTransactionManager
+
     @BeforeAll
     fun setupTable() {
-        exec(
+        adminExec(
             """
             CREATE TABLE IF NOT EXISTS test_entity (
                 id UUID PRIMARY KEY,
@@ -32,16 +42,11 @@ class TenantAwareDataSourceTest : BasePostgresTest() {
         val tenantId = UUID.randomUUID()
         TenantContext.setTenantId(tenantId)
 
-        val tenantDs = TenantAwareDataSource(createPlainDataSource())
-        val txManager =
-            org.springframework.jdbc.datasource.DataSourceTransactionManager(tenantDs)
-        val txTemplate = TransactionTemplate(txManager)
+        val txTemplate = TransactionTemplate(transactionManager)
 
         txTemplate.execute { _ ->
-            // Get connection through DataSourceUtils (how Spring gets connections in @Transactional)
-            val conn = DataSourceUtils.getConnection(tenantDs)
+            val conn = DataSourceUtils.getConnection(tenantDataSource)
             try {
-                // Verify tenant_id session variable is set
                 conn.createStatement().use { stmt ->
                     stmt.executeQuery("SELECT current_setting('app.tenant_id')").use { rs ->
                         rs.next()
@@ -49,7 +54,6 @@ class TenantAwareDataSourceTest : BasePostgresTest() {
                     }
                 }
 
-                // Insert a row to prove the connection works for DML within a transaction
                 conn.prepareStatement(
                         "INSERT INTO test_entity (id, name, tenant_id) VALUES (?, ?, ?)"
                     )
@@ -60,7 +64,7 @@ class TenantAwareDataSourceTest : BasePostgresTest() {
                         assertThat(ps.executeUpdate()).isEqualTo(1)
                     }
             } finally {
-                DataSourceUtils.releaseConnection(conn, tenantDs)
+                DataSourceUtils.releaseConnection(conn, tenantDataSource)
             }
         }
     }
@@ -70,28 +74,16 @@ class TenantAwareDataSourceTest : BasePostgresTest() {
         val tenantId = UUID.randomUUID()
         TenantContext.setTenantId(tenantId)
 
-        val tenantDs = TenantAwareDataSource(createPlainDataSource())
-        val txManager =
-            org.springframework.jdbc.datasource.DataSourceTransactionManager(tenantDs)
-        val txTemplate = TransactionTemplate(txManager)
+        val txTemplate = TransactionTemplate(transactionManager)
 
         txTemplate.execute { _ ->
-            val conn1 = DataSourceUtils.getConnection(tenantDs)
-            val conn2 = DataSourceUtils.getConnection(tenantDs)
+            val conn1 = DataSourceUtils.getConnection(tenantDataSource)
+            val conn2 = DataSourceUtils.getConnection(tenantDataSource)
 
-            // Spring should return the same connection within the same transaction
             assertThat(conn1).isSameAs(conn2)
 
-            DataSourceUtils.releaseConnection(conn2, tenantDs)
-            DataSourceUtils.releaseConnection(conn1, tenantDs)
-        }
-    }
-
-    private fun createPlainDataSource(): DataSource {
-        return com.zaxxer.hikari.HikariDataSource().apply {
-            jdbcUrl = postgresContainer.jdbcUrl
-            username = postgresContainer.username
-            password = postgresContainer.password
+            DataSourceUtils.releaseConnection(conn2, tenantDataSource)
+            DataSourceUtils.releaseConnection(conn1, tenantDataSource)
         }
     }
 }

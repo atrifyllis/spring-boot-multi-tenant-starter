@@ -2,7 +2,6 @@ package com.github.atrifyllis.multitenancy.autoconfigure
 
 import com.github.atrifyllis.multitenancy.BasePostgresTest
 import java.sql.Connection
-import java.sql.DriverManager
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -15,9 +14,9 @@ class RlsRepeatableMigrationTest : BasePostgresTest() {
 
     @BeforeAll
     fun setupTables() {
-        exec("CREATE TABLE IF NOT EXISTS included (id uuid primary key, tenant_id uuid)")
-        exec("CREATE TABLE IF NOT EXISTS excluded (id uuid primary key, tenant_id uuid)")
-        exec("CREATE TABLE IF NOT EXISTS no_tenant_col (id uuid primary key)")
+        adminExec("CREATE TABLE IF NOT EXISTS included (id uuid primary key, tenant_id uuid)")
+        adminExec("CREATE TABLE IF NOT EXISTS excluded (id uuid primary key, tenant_id uuid)")
+        adminExec("CREATE TABLE IF NOT EXISTS no_tenant_col (id uuid primary key)")
     }
 
     @Test
@@ -28,7 +27,7 @@ class RlsRepeatableMigrationTest : BasePostgresTest() {
 
         migrate()
 
-        openConnection().use { conn ->
+        adminDataSource!!.connection.use { conn ->
             assertThat(policyExists(conn, "public", "included", "tenant_isolation_policy")).isTrue()
             assertThat(rlsEnabled(conn, "public", "included")).isTrue()
             assertThat(policyExists(conn, "public", "excluded", "tenant_isolation_policy"))
@@ -53,29 +52,22 @@ class RlsRepeatableMigrationTest : BasePostgresTest() {
 
         migrate()
 
-        exec("CREATE TABLE IF NOT EXISTS $tableName (id uuid primary key, tenant_id uuid)")
+        adminExec("CREATE TABLE IF NOT EXISTS $tableName (id uuid primary key, tenant_id uuid)")
 
         Thread.sleep(10)
 
         migrate()
 
         try {
-            openConnection().use { conn ->
+            adminDataSource!!.connection.use { conn ->
                 assertThat(policyExists(conn, "public", tableName, "tenant_isolation_policy"))
                     .isTrue()
                 assertThat(rlsEnabled(conn, "public", tableName)).isTrue()
             }
         } finally {
-            exec("DROP TABLE IF EXISTS $tableName CASCADE")
+            adminExec("DROP TABLE IF EXISTS $tableName CASCADE")
         }
     }
-
-    private fun openConnection(): Connection =
-        DriverManager.getConnection(
-            postgresContainer.jdbcUrl,
-            postgresContainer.username,
-            postgresContainer.password,
-        )
 
     @Suppress("SameParameterValue")
     private fun policyExists(
