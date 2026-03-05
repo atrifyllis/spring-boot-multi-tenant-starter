@@ -3,7 +3,7 @@ kotlin = "2.1.20"
 dependencyManagement = "1.1.7"
 kotlinLogging = "7.0.13"
 springBoot = "3.5.7"
-jooq = "3.20.8"
+jooq = "3.20.11"
 ktfmt = "0.25.0"
 testContainersPostgres = "1.21.3"
 
