@@ -43,6 +43,13 @@ dependencies {
     compileOnly("org.springframework.boot:spring-boot-starter-data-jpa")
     compileOnly("org.flywaydb:flyway-core")
     compileOnly("org.flywaydb:flyway-database-postgresql")
+    // Spring Boot 4 modular jars: autoconfigure classes for jooq/jdbc/flyway/transaction moved here
+    compileOnly("org.springframework.boot:spring-boot-jooq")
+    compileOnly("org.springframework.boot:spring-boot-jdbc")
+    compileOnly("org.springframework.boot:spring-boot-flyway")
+    compileOnly("org.springframework.boot:spring-boot-transaction")
+    compileOnly("org.springframework.boot:spring-boot-hibernate")
+    compileOnly("org.springframework.boot:spring-boot-jpa")
 
     kapt("org.springframework.boot:spring-boot-configuration-processor")
 
@@ -51,6 +58,8 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
     testImplementation("org.springframework.security:spring-security-test")
     testImplementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    // Spring Boot 4 modular test jars
+    testImplementation("org.springframework.boot:spring-boot-webmvc-test")
 
     testImplementation(libs.jakartaPersistenceApi)
     testImplementation(libs.springJdbc)
@@ -58,11 +67,13 @@ dependencies {
     testImplementation(libs.h2)
     testImplementation(libs.jooq)
     testImplementation(libs.jooqJpaExtensions)
+    testImplementation("org.springframework.boot:spring-boot-jooq")
     testImplementation("org.flywaydb:flyway-core")
     testImplementation("org.flywaydb:flyway-database-postgresql")
+    testImplementation("org.springframework.boot:spring-boot-flyway")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
 
-    testImplementation("org.testcontainers:junit-jupiter")
+    testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation(libs.testContainersPostgres)
     testImplementation("org.postgresql:postgresql")
 

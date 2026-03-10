@@ -2,8 +2,8 @@ package com.github.atrifyllis.multitenancy.autoconfigure
 
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.boot.autoconfigure.flyway.FlywayConfigurationCustomizer
 import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.boot.flyway.autoconfigure.FlywayConfigurationCustomizer
 import org.springframework.context.annotation.Bean
 
 @AutoConfiguration

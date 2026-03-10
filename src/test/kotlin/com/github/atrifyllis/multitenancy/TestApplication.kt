@@ -2,7 +2,7 @@ package com.github.atrifyllis.multitenancy
 
 import com.github.atrifyllis.multitenancy.application.service.TenantContext
 import org.springframework.boot.autoconfigure.SpringBootApplication
-import org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration
+import org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RestController
@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController
  * `entityManagerFactory`, but the starter creates `adminEntityManagerFactory` and
  * `tenantEntityManagerFactory` instead. Without this exclusion, Spring fails to start.
  */
-@SpringBootApplication(exclude = [JpaRepositoriesAutoConfiguration::class])
+@SpringBootApplication(exclude = [DataJpaRepositoriesAutoConfiguration::class])
 class TestApplication
 
 /**
