@@ -1,24 +1,24 @@
 package com.github.atrifyllis.multitenancy.autoconfigure
 
-import com.zaxxer.hikari.HikariDataSource
 import com.github.atrifyllis.multitenancy.adapters.secondary.persistence.TenantAwareDataSource
+import com.zaxxer.hikari.HikariDataSource
 import jakarta.persistence.EntityManagerFactory
-import javax.sql.DataSource
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties
-import org.springframework.boot.autoconfigure.transaction.TransactionManagerCustomizers
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
-import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder
+import org.springframework.boot.jdbc.autoconfigure.DataSourceProperties
+import org.springframework.boot.jpa.EntityManagerFactoryBuilder
+import org.springframework.boot.transaction.autoconfigure.TransactionManagerCustomizers
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
 import org.springframework.orm.jpa.JpaTransactionManager
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean
 import org.springframework.transaction.PlatformTransactionManager
+import javax.sql.DataSource
 
 /**
  * Autoconfigures the tenant (application) DataSource and JPA stack. Mirrors core DataSourceConfig

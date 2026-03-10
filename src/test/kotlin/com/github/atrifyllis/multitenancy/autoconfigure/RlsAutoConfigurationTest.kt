@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.Test
 import org.springframework.boot.autoconfigure.AutoConfigurations
+import org.springframework.boot.flyway.autoconfigure.FlywayConfigurationCustomizer
 import org.springframework.boot.test.context.runner.ApplicationContextRunner
 
 class RlsAutoConfigurationTest {
@@ -25,11 +26,7 @@ class RlsAutoConfigurationTest {
             )
             .run { ctx ->
                 val customizer =
-                    ctx.getBean(
-                        org.springframework.boot.autoconfigure.flyway
-                                .FlywayConfigurationCustomizer::class
-                            .java
-                    )
+                    ctx.getBean(FlywayConfigurationCustomizer::class.java)
                 val fc = Flyway.configure()
                 customizer.customize(fc)
                 val placeholders = fc.placeholders
@@ -46,11 +43,7 @@ class RlsAutoConfigurationTest {
     fun `auto-config backs off when disabled`() {
         runner("multitenancy.enabled=true", "multitenancy.rls.enabled=false").run { ctx ->
             assertThat(
-                    ctx.getBeanNamesForType(
-                        org.springframework.boot.autoconfigure.flyway
-                                .FlywayConfigurationCustomizer::class
-                            .java
-                    )
+                    ctx.getBeanNamesForType(FlywayConfigurationCustomizer::class.java)
                 )
                 .isEmpty()
         }

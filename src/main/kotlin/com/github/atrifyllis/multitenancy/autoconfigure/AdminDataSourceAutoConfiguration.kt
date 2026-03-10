@@ -2,7 +2,6 @@ package com.github.atrifyllis.multitenancy.autoconfigure
 
 import com.zaxxer.hikari.HikariDataSource
 import jakarta.persistence.EntityManagerFactory
-import javax.sql.DataSource
 import org.jooq.impl.DataSourceConnectionProvider
 import org.jooq.impl.DefaultConfiguration
 import org.jooq.jpa.extensions.DefaultAnnotatedPojoMemberProvider
@@ -13,20 +12,21 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.boot.autoconfigure.flyway.FlywayDataSource
-import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties
-import org.springframework.boot.autoconfigure.jooq.DefaultConfigurationCustomizer
-import org.springframework.boot.autoconfigure.jooq.JooqProperties
-import org.springframework.boot.autoconfigure.jooq.SpringTransactionProvider
-import org.springframework.boot.autoconfigure.transaction.TransactionManagerCustomizers
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.boot.flyway.autoconfigure.FlywayDataSource
+import org.springframework.boot.jdbc.autoconfigure.DataSourceProperties
+import org.springframework.boot.jooq.autoconfigure.DefaultConfigurationCustomizer
+import org.springframework.boot.jooq.autoconfigure.JooqProperties
+import org.springframework.boot.jooq.autoconfigure.SpringTransactionProvider
+import org.springframework.boot.transaction.autoconfigure.TransactionManagerCustomizers
 import org.springframework.context.annotation.Bean
 import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy
 import org.springframework.orm.jpa.JpaTransactionManager
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter
 import org.springframework.transaction.PlatformTransactionManager
+import javax.sql.DataSource
 
 /**
  * Autoconfigures admin DataSource + jOOQ + JPA, mirroring core with minimal conditions.

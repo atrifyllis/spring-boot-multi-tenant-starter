@@ -1,19 +1,20 @@
 package com.github.atrifyllis.multitenancy
 
+import com.github.atrifyllis.multitenancy.BasePostgresTest.Companion.initialize
 import com.github.atrifyllis.multitenancy.application.service.TenantContext
-import java.time.Duration
-import javax.sql.DataSource
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.AfterEach
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.boot.autoconfigure.flyway.FlywayConfigurationCustomizer
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
+import org.springframework.boot.flyway.autoconfigure.FlywayConfigurationCustomizer
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
-import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Testcontainers
+import org.testcontainers.postgresql.PostgreSQLContainer
+import java.time.Duration
+import javax.sql.DataSource
 
 /**
  * Base class for all integration tests. Provides a shared PostgreSQL container and
@@ -69,15 +70,16 @@ open class BasePostgresTest {
 
         // init.sql creates the `app_user` role before Spring starts, so the tenant
         // datasource connection pool can connect as `app_user` immediately.
-        val postgresContainer: PostgreSQLContainer<*> =
-            PostgreSQLContainer("postgres:16-alpine")
-                .withTmpFs(mapOf("/var/lib/postgresql/data" to "rw"))
-                .withUsername("core")
-                .withPassword("core")
-                .withCommand("postgres", "-c", "fsync=off", "-c", "log_statement=all")
-                .withInitScript("init.sql")
-                .withStartupTimeout(Duration.ofSeconds(90))
-                .withReuse(true)
+        val postgresContainer: PostgreSQLContainer =
+            PostgreSQLContainer("postgres:16-alpine").apply {
+                withTmpFs(mapOf("/var/lib/postgresql/data" to "rw"))
+                withUsername("core")
+                withPassword("core")
+                withCommand("postgres", "-c", "fsync=off", "-c", "log_statement=all")
+                withInitScript("init.sql")
+                withStartupTimeout(Duration.ofSeconds(90))
+                withReuse(true)
+            }
 
         init {
             postgresContainer.start()
@@ -90,12 +92,12 @@ open class BasePostgresTest {
         @JvmStatic
         @DynamicPropertySource
         fun initialize(registry: DynamicPropertyRegistry) {
-            registry.add("multitenancy.admin.datasource.url", postgresContainer::getJdbcUrl)
-            registry.add("multitenancy.tenant.datasource.url", postgresContainer::getJdbcUrl)
+            registry.add("multitenancy.admin.datasource.url") { postgresContainer.jdbcUrl }
+            registry.add("multitenancy.tenant.datasource.url") { postgresContainer.jdbcUrl }
 
             // Admin connects as "core" (table owner, bypasses RLS)
-            registry.add("multitenancy.admin.datasource.username", postgresContainer::getUsername)
-            registry.add("multitenancy.admin.datasource.password", postgresContainer::getPassword)
+            registry.add("multitenancy.admin.datasource.username") { postgresContainer.username }
+            registry.add("multitenancy.admin.datasource.password") { postgresContainer.password }
             // Tenant connects as "app_user" (non-owner, RLS enforced)
             registry.add("multitenancy.tenant.datasource.username") { APP_USER }
             registry.add("multitenancy.tenant.datasource.password") { APP_PASSWORD }
