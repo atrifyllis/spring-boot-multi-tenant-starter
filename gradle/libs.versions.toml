@@ -1,7 +1,7 @@
 [versions]
 kotlin = "2.3.10"
 dependencyManagement = "1.1.7"
-kotlinLogging = "7.0.14"
+kotlinLogging = "8.0.01"
 springBoot = "4.0.3"
 jooq = "3.20.11"
 ktfmt = "0.25.0"
