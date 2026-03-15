@@ -5,6 +5,7 @@ import com.github.atrifyllis.multitenancy.application.service.TenantContext
 import java.util.*
 import javax.sql.DataSource
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -137,6 +138,38 @@ class RlsEnforcementTest : BasePostgresTest() {
                     rs.next()
                     assertThat(rs.getInt(1)).isEqualTo(1)
                 }
+            }
+        }
+    }
+
+    @Test
+    fun `tenant cannot insert row with a different tenant_id`() {
+        TenantContext.setTenantId(tenantA)
+        tenantDataSource.connection.use { conn ->
+            conn.prepareStatement(
+                "INSERT INTO $TABLE_NAME (id, name, tenant_id) VALUES (?, ?, ?)"
+            ).use { ps ->
+                ps.setObject(1, UUID.randomUUID())
+                ps.setString(2, "forged-row")
+                ps.setObject(3, tenantB) // different tenant — should be rejected
+                assertThatThrownBy { ps.executeUpdate() }
+                    .isInstanceOf(java.sql.SQLException::class.java)
+            }
+        }
+    }
+
+    @Test
+    fun `tenant cannot change tenant_id of own row to another tenant`() {
+        insertRow(tenantA, "row-to-move")
+
+        TenantContext.setTenantId(tenantA)
+        tenantDataSource.connection.use { conn ->
+            conn.prepareStatement(
+                "UPDATE $TABLE_NAME SET tenant_id = ? WHERE name = 'row-to-move'"
+            ).use { ps ->
+                ps.setObject(1, tenantB) // move to different tenant — should be rejected
+                assertThatThrownBy { ps.executeUpdate() }
+                    .isInstanceOf(java.sql.SQLException::class.java)
             }
         }
     }
