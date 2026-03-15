@@ -1,6 +1,7 @@
 package com.github.atrifyllis.multitenancy.adapters.secondary.persistence
 
 import com.github.atrifyllis.multitenancy.application.service.TenantContext
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
@@ -9,6 +10,8 @@ import java.sql.SQLException
 import java.util.*
 import javax.sql.DataSource
 import org.springframework.jdbc.datasource.DelegatingDataSource
+
+private val logger = KotlinLogging.logger {}
 
 /** Tenant-Aware Datasource that decorates Connections with current tenant information. */
 class TenantAwareDataSource(private val targetDataSource: DataSource) :
@@ -55,7 +58,12 @@ class TenantAwareDataSource(private val targetDataSource: DataSource) :
         @Throws(Throwable::class)
         override fun invoke(proxy: Any, method: Method, args: Array<Any>?): Any? {
             if (method.name == "close") {
-                clearTenantId(target)
+                try {
+                    clearTenantId(target)
+                } catch (e: Exception) {
+                    logger.error(e) { "Failed to RESET app.tenant_id; connection may carry stale tenant context" }
+                }
+                return method.invoke(target, *(args ?: emptyArray()))
             }
             return method.invoke(target, *(args ?: emptyArray()))
         }
