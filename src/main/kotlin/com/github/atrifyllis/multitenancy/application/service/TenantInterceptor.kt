@@ -22,8 +22,7 @@ class TenantInterceptor : HandlerInterceptor {
     ): Boolean {
         (SecurityContextHolder.getContext().authentication as? JwtAuthenticationToken)?.let {
             jwtAuthenticationToken ->
-            log.info { "TenantInterceptor: ${jwtAuthenticationToken.token}" }
-            log.info { "TenantInterceptor: ${jwtAuthenticationToken.token.claims["tenantId"]}" }
+            log.debug { "Resolving tenant from claim: ${jwtAuthenticationToken.token.claims["tenantId"]}" }
             (jwtAuthenticationToken.token.claims["tenantId"] as? List<*>)?.let { tenantIds ->
                 val headerTenantId = request.getHeader("X-Tenant-ID")
                 resolveCurrentTenantId(tenantIds, headerTenantId)?.let {

@@ -66,7 +66,7 @@ $$
                                     );
                         END IF;
                     ELSE
-                        RAISE NOTICE 'RLS skipped for %.%: missing tenant column %', v_schema, rec.table_name, v_tenant_col;
+                        RAISE DEBUG 'RLS skipped for %.%: missing tenant column %', v_schema, rec.table_name, v_tenant_col;
                     END IF;
                 END LOOP;
         END IF;
